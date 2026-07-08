@@ -1,0 +1,50 @@
+prefix: "<gradient:#20f2ff:#ff4fd8><bold>Reload</bold></gradient> <dark_gray>»</dark_gray> "
+
+server:
+  whitelist-enabled-by-default: true
+
+lobby:
+  world: "world"
+  spawn:
+    enabled: false
+    x: 0.5
+    y: 100.0
+    z: 0.5
+    yaw: 0.0
+    pitch: 0.0
+
+game:
+  countdown-seconds: 5
+  max-duration-seconds: 3600
+  clear-inventory-on-start: true
+  keep-generated-worlds: false
+  reset-mode: "NEW_WORLD"
+  generated-world-prefix: "reload_challenges_"
+  preload-radius-chunks: 4
+  preload-chunks-per-tick: 3
+
+teams:
+  names:
+    red: "Rouge"
+    blue: "Bleue"
+
+challenges:
+  # Les objectifs aléatoires sont générés depuis les registres/recettes du serveur.
+  # Les petites listes statiques ne sont plus utilisées.
+  find:
+    use-all-items: true
+  where-block:
+    use-all-blocks: true
+  craft:
+    use-all-server-recipes: true
+  speedrun:
+    create-end-world: true
+  biome:
+    use-all-biomes: true
+  mob-hunt:
+    use-all-spawnable-mobs: true
+  bingo:
+    size: "5x5"
+    objectives: 25
+    includes-items: true
+    includes-mobs: true

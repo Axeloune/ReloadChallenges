@@ -1,0 +1,18 @@
+name: ReloadChallenges
+version: ${project.version}
+main: fr.victin.reloadchallenges.ReloadChallengesPlugin
+api-version: '26.2'
+author: Victin
+description: Mini-jeux Reload Challenges pour Paper 26.2.
+commands:
+  host:
+    description: Commande principale de l'hôte Reload Challenges.
+    usage: /host
+    aliases: [h]
+permissions:
+  reloadchallenges.host:
+    description: Autorise l'administration des parties Reload Challenges.
+    default: op
+  reloadchallenges.reload:
+    description: Autorise le rechargement de la configuration.
+    default: op
