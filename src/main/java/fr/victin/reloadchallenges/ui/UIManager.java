@@ -128,16 +128,20 @@ public final class UIManager {
 
     public void openGameSelect(Player player) {
         playMenuOpen(player);
-        Inventory inventory = Bukkit.createInventory(new ReloadGuiHolder(GuiType.GAME_SELECT), 45, mm("<aqua><bold>Choisir un mini-jeu</bold>"));
-        inventory.setItem(13, item(ChallengeType.RANDOM.icon(), "<gradient:#20f2ff:#ff4fd8><bold>" + ChallengeType.RANDOM.displayName() + "</bold></gradient>", gameLore(ChallengeType.RANDOM)));
-        int[] slots = {18, 19, 20, 21, 23, 24, 25};
-        int index = 0;
-        for (ChallengeType type : ChallengeType.values()) {
-            if (type == ChallengeType.RANDOM) {
-                continue;
-            }
-            inventory.setItem(slots[index++], item(type.icon(), "<aqua><bold>" + type.displayName() + "</bold></aqua>", gameLore(type)));
-        }
+        Inventory inventory = Bukkit.createInventory(new ReloadGuiHolder(GuiType.GAME_SELECT), 54, mm("<aqua><bold>Choisir un mini-jeu</bold>"));
+        inventory.setItem(10, item(ChallengeType.RANDOM.icon(), "<gradient:#20f2ff:#ff4fd8><bold>" + ChallengeType.RANDOM.displayName() + "</bold></gradient>", gameLore(ChallengeType.RANDOM)));
+        inventory.setItem(19, item(ChallengeType.FIND.icon(), "<aqua><bold>" + ChallengeType.FIND.displayName() + "</bold></aqua>", gameLore(ChallengeType.FIND)));
+        inventory.setItem(20, item(ChallengeType.WHERE_BLOCK.icon(), "<aqua><bold>" + ChallengeType.WHERE_BLOCK.displayName() + "</bold></aqua>", gameLore(ChallengeType.WHERE_BLOCK)));
+        inventory.setItem(21, item(ChallengeType.CRAFT.icon(), "<aqua><bold>" + ChallengeType.CRAFT.displayName() + "</bold></aqua>", gameLore(ChallengeType.CRAFT)));
+        inventory.setItem(22, item(ChallengeType.SPEEDRUN.icon(), "<aqua><bold>" + ChallengeType.SPEEDRUN.displayName() + "</bold></aqua>", gameLore(ChallengeType.SPEEDRUN)));
+        inventory.setItem(23, item(ChallengeType.WHERE_BIOME.icon(), "<aqua><bold>" + ChallengeType.WHERE_BIOME.displayName() + "</bold></aqua>", gameLore(ChallengeType.WHERE_BIOME)));
+        inventory.setItem(24, item(ChallengeType.MOB_HUNT.icon(), "<aqua><bold>" + ChallengeType.MOB_HUNT.displayName() + "</bold></aqua>", gameLore(ChallengeType.MOB_HUNT)));
+        inventory.setItem(25, item(ChallengeType.BINGO.icon(), "<aqua><bold>" + ChallengeType.BINGO.displayName() + "</bold></aqua>", gameLore(ChallengeType.BINGO)));
+        inventory.setItem(37, item(Material.BOOK, "<yellow><bold>Mini-jeux disponibles</bold></yellow>", List.of(
+            "<gray>Nombre :</gray> <white>8</white>",
+            "<gray>Le mode aléatoire tire parmi tous les jeux.</gray>",
+            "<gray>Bingo est une grille complète 5x5.</gray>"
+        )));
         inventory.setItem(40, item(Material.ARROW, "<gray><bold>Retour</bold></gray>", List.of("<yellow>➜ Retour au panneau de l'hôte</yellow>")));
         decorateCorners(inventory);
         player.openInventory(inventory);

@@ -12,7 +12,20 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.Map;
+
 public final class GuiListener implements Listener {
+    private static final Map<Integer, ChallengeType> GAME_SLOTS = Map.of(
+        10, ChallengeType.RANDOM,
+        19, ChallengeType.FIND,
+        20, ChallengeType.WHERE_BLOCK,
+        21, ChallengeType.CRAFT,
+        22, ChallengeType.SPEEDRUN,
+        23, ChallengeType.WHERE_BIOME,
+        24, ChallengeType.MOB_HUNT,
+        25, ChallengeType.BINGO
+    );
+
     private final ReloadChallengesPlugin plugin;
 
     public GuiListener(ReloadChallengesPlugin plugin) {
@@ -42,18 +55,17 @@ public final class GuiListener implements Listener {
             return;
         }
         if (holder.type() == GuiType.GAME_SELECT) {
+            ChallengeType slotType = GAME_SLOTS.get(event.getRawSlot());
+            if (slotType != null) {
+                plugin.uiManager().playMenuConfirm(player);
+                plugin.gameManager().selectType(slotType);
+                plugin.uiManager().openHostConfig(player);
+                return;
+            }
             if (clicked.getType() == Material.ARROW) {
                 plugin.uiManager().playMenuBack(player);
                 plugin.uiManager().openHostConfig(player);
                 return;
-            }
-            for (ChallengeType type : ChallengeType.values()) {
-                if (type.icon() == clicked.getType()) {
-                    plugin.uiManager().playMenuConfirm(player);
-                    plugin.gameManager().selectType(type);
-                    plugin.uiManager().openHostConfig(player);
-                    return;
-                }
             }
         }
         if (holder.type() == GuiType.MODE_SELECT) {
