@@ -9,6 +9,9 @@ commands:
     description: Commande principale de l'hôte Reload Challenges.
     usage: /host
     aliases: [h]
+  bingo:
+    description: Ouvre la grille du mini-jeu Bingo en cours.
+    usage: /bingo
 permissions:
   reloadchallenges.host:
     description: Autorise l'administration des parties Reload Challenges.

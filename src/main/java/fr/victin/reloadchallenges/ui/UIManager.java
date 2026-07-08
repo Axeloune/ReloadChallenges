@@ -44,7 +44,10 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public final class UIManager {
     private static final MiniMessage MINI = MiniMessage.miniMessage();
@@ -56,6 +59,7 @@ public final class UIManager {
     private BossBar objectiveBar;
     private BossBar endingBar;
     private BossBar preparationBar;
+    private final Map<UUID, BossBar> bingoProgressBars = new HashMap<>();
     private BukkitTask rouletteTask;
     private final List<ItemDisplay> objectiveDisplays = new ArrayList<>();
 
@@ -279,6 +283,44 @@ public final class UIManager {
         objectiveBar = null;
     }
 
+    public void showBingoProgressBar(BingoChallenge bingoChallenge) {
+        hideObjectiveBar();
+        hideBingoProgressBars();
+        updateBingoProgressBar(bingoChallenge);
+    }
+
+    public void updateBingoProgressBar(BingoChallenge bingoChallenge) {
+        for (ReloadPlayer reloadPlayer : plugin.playerManager().gamePlayers()) {
+            Player player = reloadPlayer.bukkitPlayer().orElse(null);
+            if (player == null) {
+                continue;
+            }
+            int completed = bingoChallenge.completedCount(player);
+            float progress = Math.max(0.0F, Math.min(1.0F, completed / 25.0F));
+            BossBar bar = bingoProgressBars.computeIfAbsent(player.getUniqueId(), ignored -> {
+                BossBar created = BossBar.bossBar(Component.empty(), 0.0F, BossBar.Color.GREEN, BossBar.Overlay.PROGRESS);
+                player.showBossBar(created);
+                return created;
+            });
+            bar.name(mm("<gradient:#20f2ff:#ff4fd8><bold>Bingo</bold></gradient> <white>" + completed + "/25</white> <gray>|</gray> <aqua>/bingo</aqua> <gray>grille</gray>"));
+            bar.progress(progress);
+            bar.color(completed >= 25 ? BossBar.Color.YELLOW : BossBar.Color.GREEN);
+        }
+    }
+
+    public void hideBingoProgressBars() {
+        if (bingoProgressBars.isEmpty()) {
+            return;
+        }
+        for (Map.Entry<UUID, BossBar> entry : bingoProgressBars.entrySet()) {
+            Player player = Bukkit.getPlayer(entry.getKey());
+            if (player != null) {
+                player.hideBossBar(entry.getValue());
+            }
+        }
+        bingoProgressBars.clear();
+    }
+
     public void playStartAnimation(ChallengeGame game) {
         cancelRoulette();
         clearObjectiveDisplays();
@@ -332,6 +374,7 @@ public final class UIManager {
 
     public void playVictory(Player winner, ReloadTeam winnerTeam) {
         hideObjectiveBar();
+        hideBingoProgressBars();
         if (endingBar != null) {
             Bukkit.getOnlinePlayers().forEach(player -> player.hideBossBar(endingBar));
         }
@@ -422,6 +465,7 @@ public final class UIManager {
     public void shutdown() {
         cancelRoulette();
         hideObjectiveBar();
+        hideBingoProgressBars();
         hidePreparationBar();
         if (endingBar != null) {
             BossBar bar = endingBar;
@@ -464,6 +508,16 @@ public final class UIManager {
             meta.displayName(mm(name));
             meta.lore(lore.stream().map(this::mm).toList());
             meta.addItemFlags(ItemFlag.values());
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private ItemStack item(Material material, String name, List<String> lore, boolean glint) {
+        ItemStack item = item(material, name, lore);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setEnchantmentGlintOverride(glint);
             item.setItemMeta(meta);
         }
         return item;
@@ -638,14 +692,13 @@ public final class UIManager {
     private ItemStack bingoObjectiveItem(Player player, BingoChallenge bingoChallenge, int index) {
         BingoChallenge.BingoObjective objective = bingoChallenge.objectives().get(index);
         boolean done = bingoChallenge.isCompleted(player, index);
-        Material icon = done ? Material.LIME_STAINED_GLASS_PANE : objective.icon();
         String status = done ? "<green>Validé</green>" : "<yellow>À faire</yellow>";
-        return item(icon, (done ? "<green><bold>" : "<yellow><bold>") + objective.displayName() + "</bold>", List.of(
+        return item(objective.icon(), (done ? "<green><bold>" : "<yellow><bold>") + objective.displayName() + "</bold>", List.of(
             "<gray>Type :</gray> <white>" + objective.kindLabel() + "</white>",
             "<gray>Statut :</gray> " + status,
             "",
             done ? "<green>Cette case est complétée.</green>" : "<gray>Objectif requis pour finir la grille.</gray>"
-        ));
+        ), done);
     }
 
     private int[] bingoSlots() {

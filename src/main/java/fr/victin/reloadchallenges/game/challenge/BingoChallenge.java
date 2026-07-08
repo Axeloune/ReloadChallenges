@@ -7,18 +7,12 @@ import fr.victin.reloadchallenges.player.ReloadPlayer;
 import fr.victin.reloadchallenges.util.Formatters;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.FurnaceExtractEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.ItemFlag;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,13 +22,11 @@ import java.util.Map;
 import java.util.Set;
 
 public final class BingoChallenge extends ChallengeGame {
-    private final NamespacedKey boardKey;
     private final List<BingoObjective> objectives = new ArrayList<>();
     private final Map<String, Set<Integer>> completed = new HashMap<>();
 
     public BingoChallenge(ReloadChallengesPlugin plugin, ChallengeMode mode) {
         super(plugin, ChallengeType.BINGO, mode);
-        this.boardKey = new NamespacedKey(plugin, "bingo_board");
     }
 
     @Override
@@ -55,12 +47,12 @@ public final class BingoChallenge extends ChallengeGame {
 
     @Override
     public void start() {
+        plugin.uiManager().showBingoProgressBar(this);
         for (Player player : Bukkit.getOnlinePlayers()) {
-            giveBoard(player);
             plugin.uiManager().openBingoBoard(player, this);
             player.showTitle(net.kyori.adventure.title.Title.title(
                 plugin.uiManager().mm("<gradient:#20f2ff:#ff4fd8><bold>Bingo</bold></gradient>"),
-                plugin.uiManager().mm("<white>Complète les 25 objectifs de la grille</white>"),
+                plugin.uiManager().mm("<white>Complète la grille. </white><aqua>/bingo</aqua> <gray>pour la rouvrir.</gray>"),
                 net.kyori.adventure.title.Title.Times.times(java.time.Duration.ofMillis(250), java.time.Duration.ofSeconds(3), java.time.Duration.ofMillis(600))
             ));
             player.playSound(player.getLocation(), Sound.ITEM_BOOK_PAGE_TURN, 0.9F, 1.1F);
@@ -68,13 +60,16 @@ public final class BingoChallenge extends ChallengeGame {
     }
 
     @Override
+    public void stop() {
+        plugin.uiManager().hideBingoProgressBars();
+    }
+
+    @Override
     public void tick(int elapsedSeconds) {
         for (ReloadPlayer reloadPlayer : plugin.playerManager().gamePlayers()) {
-            reloadPlayer.bukkitPlayer().ifPresent(player -> {
-                giveBoard(player);
-                checkInventory(player);
-            });
+            reloadPlayer.bukkitPlayer().ifPresent(this::checkInventory);
         }
+        plugin.uiManager().updateBingoProgressBar(this);
     }
 
     @Override
@@ -84,14 +79,6 @@ public final class BingoChallenge extends ChallengeGame {
             if (objective.kind() == BingoObjectiveKind.ITEM && player.getInventory().contains(objective.item())) {
                 markCompleted(player, i);
             }
-        }
-    }
-
-    @Override
-    public void handleInteract(PlayerInteractEvent event) {
-        if (isBoardItem(event.getItem())) {
-            event.setCancelled(true);
-            plugin.uiManager().openBingoBoard(event.getPlayer(), this);
         }
     }
 
@@ -171,7 +158,11 @@ public final class BingoChallenge extends ChallengeGame {
 
         plugin.playerManager().get(player).ifPresent(reloadPlayer -> reloadPlayer.statistics().markObjectiveCompleted());
         player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.7F, 1.65F);
-        player.sendMessage(plugin.uiManager().prefixed("<green>Bingo :</green> <white>" + objectives.get(index).displayName() + "</white> <gray>(" + ownerCompleted.size() + "/25)</gray>"));
+        plugin.uiManager().broadcast("<green>Bingo :</green> <white>" + ownerDisplayName(player) + "</white> <gray>a validé</gray> <yellow>" + objectives.get(index).displayName() + "</yellow> <gray>(" + ownerCompleted.size() + "/25)</gray>");
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            online.playSound(online.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 0.55F, 1.55F);
+        }
+        plugin.uiManager().updateBingoProgressBar(this);
         refreshOpenBoards();
 
         if (ownerCompleted.size() >= 25) {
@@ -198,32 +189,14 @@ public final class BingoChallenge extends ChallengeGame {
         return "player:" + player.getUniqueId();
     }
 
-    private void giveBoard(Player player) {
-        if (!isBoardItem(player.getInventory().getItem(8))) {
-            player.getInventory().setItem(8, boardItem());
+    private String ownerDisplayName(Player player) {
+        if (mode() == ChallengeMode.TEAMS) {
+            ReloadPlayer reloadPlayer = plugin.playerManager().get(player).orElse(null);
+            if (reloadPlayer != null && reloadPlayer.team() != null) {
+                return reloadPlayer.team().displayName();
+            }
         }
-    }
-
-    private ItemStack boardItem() {
-        ItemStack item = new ItemStack(Material.FILLED_MAP);
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.displayName(plugin.uiManager().mm("<gradient:#20f2ff:#ff4fd8><bold>Grille Bingo</bold></gradient>"));
-            meta.lore(List.of(
-                plugin.uiManager().mm("<gray>Affiche la grille 5x5.</gray>"),
-                plugin.uiManager().mm("<yellow>➜ Clic droit : ouvrir</yellow>")
-            ));
-            meta.addItemFlags(ItemFlag.values());
-            meta.getPersistentDataContainer().set(boardKey, PersistentDataType.BYTE, (byte) 1);
-            item.setItemMeta(meta);
-        }
-        return item;
-    }
-
-    private boolean isBoardItem(ItemStack item) {
-        return item != null
-            && item.hasItemMeta()
-            && item.getItemMeta().getPersistentDataContainer().has(boardKey, PersistentDataType.BYTE);
+        return player.getName();
     }
 
     public enum BingoObjectiveKind {

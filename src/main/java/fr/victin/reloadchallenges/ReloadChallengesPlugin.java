@@ -1,5 +1,6 @@
 package fr.victin.reloadchallenges;
 
+import fr.victin.reloadchallenges.command.BingoCommand;
 import fr.victin.reloadchallenges.command.HostCommand;
 import fr.victin.reloadchallenges.game.GameManager;
 import fr.victin.reloadchallenges.listener.ChallengeListener;
@@ -36,6 +37,10 @@ public final class ReloadChallengesPlugin extends JavaPlugin {
         if (command != null) {
             command.setExecutor(hostCommand);
             command.setTabCompleter(hostCommand);
+        }
+        PluginCommand bingoCommand = getCommand("bingo");
+        if (bingoCommand != null) {
+            bingoCommand.setExecutor(new BingoCommand(this));
         }
 
         getServer().getPluginManager().registerEvents(new PlayerConnectionListener(this), this);
