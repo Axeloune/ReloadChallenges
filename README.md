@@ -1,7 +1,6 @@
 # ReloadChallenges
 
-Plugin Paper 26.2 proposant plusieurs mini-jeux jouables sur une même carte avec hôte, lobby spectateur, GUIs, scoreboards, boss bars, titles, action bars, stats, FFA/équipes et reset par nouvelle instance de monde.
-
+Plugin Paper 26.2 proposant plusieurs mini-jeux jouables dont: Craft Challenge, Find bloc, Find biome, Speedrun, Mob Killer Challenge, et Bingo (Grille de 5x5)
 ## Build
 
 Paper 26.x demande un JDK 25 ou plus récent.
