@@ -1,0 +1,25 @@
+name: Feature request
+description: Proposer une amélioration ou un nouveau mini-jeu
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: Besoin
+      description: Quel problème ou envie cette feature couvre-t-elle ?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposition
+      description: Décris le comportement souhaité.
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Détails optionnels
+      description: Ajoute des idées de GUI, commandes, règles, sons, animations, etc.
