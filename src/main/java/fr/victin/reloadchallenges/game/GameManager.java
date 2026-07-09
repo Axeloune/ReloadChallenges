@@ -3,6 +3,7 @@ package fr.victin.reloadchallenges.game;
 import fr.victin.reloadchallenges.ReloadChallengesPlugin;
 import fr.victin.reloadchallenges.game.challenge.ChallengeFactory;
 import fr.victin.reloadchallenges.game.challenge.ChallengeGame;
+import fr.victin.reloadchallenges.game.challenge.TargetMaterialChallenge;
 import fr.victin.reloadchallenges.player.PlayerState;
 import fr.victin.reloadchallenges.player.ReloadPlayer;
 import fr.victin.reloadchallenges.team.ReloadTeam;
@@ -137,7 +138,8 @@ public final class GameManager {
             for (ReloadPlayer reloadPlayer : plugin.playerManager().gamePlayers()) {
                 reloadPlayer.bukkitPlayer().ifPresent(currentGame::checkInventory);
             }
-            Bukkit.getOnlinePlayers().forEach(player -> player.sendActionBar(plugin.uiManager().mm("<aqua>" + currentGame.type().objectiveLabel() + " :</aqua> <white>" + currentGame.objectiveDisplayName() + "</white> <dark_gray>|</dark_gray> <yellow>" + Formatters.duration(elapsedMillis()) + "</yellow>")));
+            String helper = currentGame instanceof TargetMaterialChallenge ? " <dark_gray>|</dark_gray> <aqua>/craft</aqua> <gray>aide</gray>" : "";
+            Bukkit.getOnlinePlayers().forEach(player -> player.sendActionBar(plugin.uiManager().mm("<aqua>" + currentGame.type().objectiveLabel() + " :</aqua> <white>" + currentGame.objectiveDisplayName() + "</white> <dark_gray>|</dark_gray> <yellow>" + Formatters.duration(elapsedMillis()) + "</yellow>" + helper)));
             plugin.uiManager().updateAllScoreboards();
             if (elapsedSeconds >= maxDuration) {
                 finish(null, null, "Temps écoulé.");

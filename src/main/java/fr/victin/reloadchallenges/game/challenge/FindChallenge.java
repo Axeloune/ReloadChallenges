@@ -7,7 +7,7 @@ import fr.victin.reloadchallenges.util.Formatters;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 
-public final class FindChallenge extends ChallengeGame {
+public final class FindChallenge extends ChallengeGame implements TargetMaterialChallenge {
     private Material target;
 
     public FindChallenge(ReloadChallengesPlugin plugin, ChallengeMode mode) {
@@ -34,5 +34,10 @@ public final class FindChallenge extends ChallengeGame {
     @Override
     public String objectiveDisplayName() {
         return target == null ? "Inconnu" : Formatters.material(target);
+    }
+
+    @Override
+    public Material targetMaterial() {
+        return target;
     }
 }

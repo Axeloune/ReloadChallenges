@@ -6,5 +6,6 @@ public enum GuiType {
     MODE_SELECT,
     TEAM_SELECT,
     BINGO_BOARD,
+    OBJECTIVE_RECIPE,
     ROULETTE
 }

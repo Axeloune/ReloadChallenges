@@ -9,7 +9,7 @@ import org.bukkit.Sound;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 
-public final class WhereBlockChallenge extends ChallengeGame {
+public final class WhereBlockChallenge extends ChallengeGame implements TargetMaterialChallenge {
     private Material target;
 
     public WhereBlockChallenge(ReloadChallengesPlugin plugin, ChallengeMode mode) {
@@ -45,5 +45,10 @@ public final class WhereBlockChallenge extends ChallengeGame {
     @Override
     public String objectiveDisplayName() {
         return target == null ? "Inconnu" : Formatters.material(target);
+    }
+
+    @Override
+    public Material targetMaterial() {
+        return target;
     }
 }

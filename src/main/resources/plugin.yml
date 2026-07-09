@@ -12,6 +12,10 @@ commands:
   bingo:
     description: Ouvre la grille du mini-jeu Bingo en cours.
     usage: /bingo
+  craft:
+    description: Affiche la recette, la solution et l'aperçu de l'objectif item/bloc.
+    usage: /craft
+    aliases: [solution, objectif]
 permissions:
   reloadchallenges.host:
     description: Autorise l'administration des parties Reload Challenges.

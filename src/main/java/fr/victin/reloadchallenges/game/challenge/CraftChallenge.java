@@ -13,7 +13,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.ItemStack;
 
-public final class CraftChallenge extends ChallengeGame {
+public final class CraftChallenge extends ChallengeGame implements TargetMaterialChallenge {
     private Material target;
 
     public CraftChallenge(ReloadChallengesPlugin plugin, ChallengeMode mode) {
@@ -76,5 +76,10 @@ public final class CraftChallenge extends ChallengeGame {
     @Override
     public String objectiveDisplayName() {
         return target == null ? "Inconnu" : Formatters.material(target);
+    }
+
+    @Override
+    public Material targetMaterial() {
+        return target;
     }
 }

@@ -27,9 +27,15 @@ import org.bukkit.entity.Display;
 import org.bukkit.entity.Firework;
 import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.CookingRecipe;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.Recipe;
+import org.bukkit.inventory.RecipeChoice;
+import org.bukkit.inventory.ShapedRecipe;
+import org.bukkit.inventory.ShapelessRecipe;
+import org.bukkit.inventory.StonecuttingRecipe;
 import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -56,6 +62,7 @@ public final class UIManager {
 
     private final ReloadChallengesPlugin plugin;
     private final NamespacedKey hostToolKey;
+    private final NamespacedKey victoryFireworkKey;
     private BossBar objectiveBar;
     private BossBar endingBar;
     private BossBar preparationBar;
@@ -66,6 +73,7 @@ public final class UIManager {
     public UIManager(ReloadChallengesPlugin plugin) {
         this.plugin = plugin;
         this.hostToolKey = new NamespacedKey(plugin, "host_menu_tool");
+        this.victoryFireworkKey = new NamespacedKey(plugin, "victory_firework");
     }
 
     public Component mm(String input) {
@@ -212,6 +220,71 @@ public final class UIManager {
         decorateCorners(inventory);
         player.openInventory(inventory);
         playMenuOpen(player);
+    }
+
+    public void openObjectiveRecipe(Player player, Material target, ChallengeType challengeType) {
+        showObjectivePreview(player, target);
+
+        Inventory inventory = Bukkit.createInventory(new ReloadGuiHolder(GuiType.OBJECTIVE_RECIPE), 54, mm("<gradient:#20f2ff:#ff4fd8><bold>Solution</bold></gradient> <gray>" + challengeType.displayName() + "</gray>"));
+        inventory.setItem(4, item(displayMaterial(target), "<gradient:#20f2ff:#ff4fd8><bold>" + Formatters.material(target) + "</bold></gradient>", List.of(
+            "<gray>Objectif :</gray> <white>" + challengeType.displayName() + "</white>",
+            "<gray>Aperçu :</gray> <aqua>affiché devant toi quelques secondes</aqua>",
+            "",
+            "<yellow>➜ /craft : rouvrir cette aide</yellow>"
+        ), true));
+
+        Recipe recipe = firstRecipeFor(target);
+        if (recipe == null) {
+            inventory.setItem(22, item(displayMaterial(target), "<yellow><bold>Aucune recette directe</bold></yellow>", List.of(
+                "<gray>Bukkit ne connaît pas de craft direct pour cet objectif.</gray>",
+                "<white>Il faudra probablement le trouver, le miner,</white>",
+                "<white>le looter ou passer par une autre mécanique.</white>"
+            )));
+            inventory.setItem(24, item(Material.COMPASS, "<aqua><bold>Objectif visuel</bold></aqua>", List.of(
+                "<gray>L'aperçu flottant montre l'item ou le bloc demandé.</gray>",
+                "<gray>La barre d'action garde aussi le nom de l'objectif.</gray>"
+            )));
+        } else if (recipe instanceof ShapedRecipe shapedRecipe) {
+            renderShapedRecipe(inventory, shapedRecipe);
+        } else if (recipe instanceof ShapelessRecipe shapelessRecipe) {
+            renderShapelessRecipe(inventory, shapelessRecipe);
+        } else if (recipe instanceof CookingRecipe<?> cookingRecipe) {
+            renderCookingRecipe(inventory, cookingRecipe);
+        } else if (recipe instanceof StonecuttingRecipe stonecuttingRecipe) {
+            renderStonecuttingRecipe(inventory, stonecuttingRecipe);
+        } else {
+            inventory.setItem(22, item(Material.BOOK, "<yellow><bold>Recette spéciale</bold></yellow>", List.of(
+                "<gray>Cette recette existe, mais elle utilise une mécanique spéciale.</gray>",
+                "<white>Résultat affiché à droite.</white>"
+            )));
+            inventory.setItem(24, recipeResult(recipe));
+        }
+
+        inventory.setItem(52, item(Material.SPYGLASS, "<aqua><bold>Aperçu rapide</bold></aqua>", List.of(
+            "<gray>Un modèle temporaire apparaît devant toi.</gray>",
+            "<gray>Relance <white>/craft</white> si tu veux le revoir.</gray>"
+        )));
+        decorateCorners(inventory);
+        player.openInventory(inventory);
+        playMenuOpen(player);
+    }
+
+    public void showObjectivePreview(Player player, Material material) {
+        Location location = player.getEyeLocation().clone()
+            .add(player.getEyeLocation().getDirection().normalize().multiply(2.0D))
+            .add(0.0D, -0.25D, 0.0D);
+        ItemDisplay display = player.getWorld().spawn(location, ItemDisplay.class);
+        display.setItemStack(new ItemStack(displayMaterial(material)));
+        display.setBillboard(Display.Billboard.CENTER);
+        display.setGlowing(true);
+        display.setPersistent(false);
+        player.sendActionBar(mm("<aqua>Aperçu :</aqua> <white>" + Formatters.material(material) + "</white> <gray>|</gray> <yellow>/craft</yellow>"));
+        player.playSound(player.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.7F, 1.45F);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!display.isDead()) {
+                display.remove();
+            }
+        }, 140L);
     }
 
     public void showObjectiveBar(ChallengeGame game) {
@@ -479,6 +552,7 @@ public final class UIManager {
         for (int i = 0; i < 4; i++) {
             Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 Firework firework = winner.getWorld().spawn(winner.getLocation(), Firework.class);
+                firework.getPersistentDataContainer().set(victoryFireworkKey, PersistentDataType.BYTE, (byte) 1);
                 FireworkMeta meta = firework.getFireworkMeta();
                 meta.addEffect(FireworkEffect.builder()
                     .withColor(Color.AQUA, Color.FUCHSIA, Color.YELLOW)
@@ -607,6 +681,155 @@ public final class UIManager {
             }
         }
         objectiveDisplays.clear();
+    }
+
+    private Recipe firstRecipeFor(Material material) {
+        if (!material.isItem()) {
+            return null;
+        }
+        List<Recipe> recipes = Bukkit.getRecipesFor(new ItemStack(material));
+        Recipe bestRecipe = null;
+        int bestPriority = Integer.MAX_VALUE;
+        for (Recipe recipe : recipes) {
+            int priority = recipePriority(recipe);
+            if (priority < bestPriority) {
+                bestRecipe = recipe;
+                bestPriority = priority;
+            }
+        }
+        return bestRecipe;
+    }
+
+    private int recipePriority(Recipe recipe) {
+        if (recipe instanceof ShapedRecipe) {
+            return 0;
+        }
+        if (recipe instanceof ShapelessRecipe) {
+            return 1;
+        }
+        if (recipe instanceof CookingRecipe<?>) {
+            return 2;
+        }
+        if (recipe instanceof StonecuttingRecipe) {
+            return 3;
+        }
+        return 4;
+    }
+
+    private void renderShapedRecipe(Inventory inventory, ShapedRecipe recipe) {
+        inventory.setItem(22, item(Material.CRAFTING_TABLE, "<yellow><bold>Craft établi</bold></yellow>", List.of(
+            "<gray>Place les ingrédients dans cet ordre.</gray>"
+        )));
+        String[] shape = recipe.getShape();
+        int rowOffset = Math.max(0, (3 - shape.length) / 2);
+        int columnOffset = shape.length == 0 ? 0 : Math.max(0, (3 - shape[0].length()) / 2);
+        Map<Character, RecipeChoice> choices = recipe.getChoiceMap();
+        for (int row = 0; row < shape.length; row++) {
+            for (int column = 0; column < shape[row].length(); column++) {
+                char key = shape[row].charAt(column);
+                if (key == ' ') {
+                    continue;
+                }
+                ItemStack ingredient = ingredientItem(choices.get(key));
+                if (ingredient != null) {
+                    inventory.setItem(craftSlot(row + rowOffset, column + columnOffset), ingredient);
+                }
+            }
+        }
+        inventory.setItem(23, item(Material.ARROW, "<green><bold>Résultat</bold></green>", List.of("<gray>Donne l'objectif.</gray>")));
+        inventory.setItem(24, recipeResult(recipe));
+    }
+
+    private void renderShapelessRecipe(Inventory inventory, ShapelessRecipe recipe) {
+        inventory.setItem(22, item(Material.CRAFTING_TABLE, "<yellow><bold>Craft sans forme</bold></yellow>", List.of(
+            "<gray>L'ordre des ingrédients n'a pas d'importance.</gray>"
+        )));
+        int[] slots = craftSlots();
+        List<RecipeChoice> choices = recipe.getChoiceList();
+        for (int i = 0; i < choices.size() && i < slots.length; i++) {
+            ItemStack ingredient = ingredientItem(choices.get(i));
+            if (ingredient != null) {
+                inventory.setItem(slots[i], ingredient);
+            }
+        }
+        inventory.setItem(23, item(Material.ARROW, "<green><bold>Résultat</bold></green>", List.of("<gray>Donne l'objectif.</gray>")));
+        inventory.setItem(24, recipeResult(recipe));
+    }
+
+    private void renderCookingRecipe(Inventory inventory, CookingRecipe<?> recipe) {
+        inventory.setItem(20, ingredientItem(recipe.getInputChoice()));
+        inventory.setItem(22, item(Material.FURNACE, "<yellow><bold>Cuisson</bold></yellow>", List.of(
+            "<gray>Utilise un four, smoker ou blast furnace</gray>",
+            "<gray>si la recette le permet.</gray>"
+        )));
+        inventory.setItem(23, item(Material.ARROW, "<green><bold>Résultat</bold></green>", List.of("<gray>Récupère le résultat cuit.</gray>")));
+        inventory.setItem(24, recipeResult(recipe));
+        inventory.setItem(38, item(Material.COAL, "<gray><bold>Combustible</bold></gray>", List.of("<gray>N'importe quel combustible compatible.</gray>")));
+    }
+
+    private void renderStonecuttingRecipe(Inventory inventory, StonecuttingRecipe recipe) {
+        inventory.setItem(20, ingredientItem(recipe.getInputChoice()));
+        inventory.setItem(22, item(Material.STONECUTTER, "<yellow><bold>Tailleur de pierre</bold></yellow>", List.of(
+            "<gray>Transforme le bloc source avec un stonecutter.</gray>"
+        )));
+        inventory.setItem(23, item(Material.ARROW, "<green><bold>Résultat</bold></green>", List.of("<gray>Sélectionne cette sortie.</gray>")));
+        inventory.setItem(24, recipeResult(recipe));
+    }
+
+    private ItemStack ingredientItem(RecipeChoice choice) {
+        if (choice == null) {
+            return null;
+        }
+        ItemStack stack = choice.getItemStack();
+        if (stack == null || stack.getType().isAir()) {
+            return null;
+        }
+        ItemStack item = stack.clone();
+        item.setAmount(Math.max(1, item.getAmount()));
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.displayName(mm("<white>" + Formatters.material(item.getType()) + "</white>"));
+            List<String> lore = new ArrayList<>();
+            lore.add("<gray>Ingrédient</gray>");
+            if (choice instanceof RecipeChoice.MaterialChoice materialChoice && materialChoice.getChoices().size() > 1) {
+                lore.add("<dark_gray>ou " + (materialChoice.getChoices().size() - 1) + " variante(s)</dark_gray>");
+            }
+            meta.lore(lore.stream().map(this::mm).toList());
+            meta.addItemFlags(ItemFlag.values());
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private ItemStack recipeResult(Recipe recipe) {
+        ItemStack result = recipe.getResult().clone();
+        ItemMeta meta = result.getItemMeta();
+        if (meta != null) {
+            meta.displayName(mm("<green><bold>" + Formatters.material(result.getType()) + "</bold></green>"));
+            meta.lore(List.of(
+                mm("<gray>Résultat de la recette</gray>"),
+                mm("<gray>Quantité :</gray> <white>" + result.getAmount() + "</white>")
+            ));
+            meta.addItemFlags(ItemFlag.values());
+            result.setItemMeta(meta);
+        }
+        return result;
+    }
+
+    private int craftSlot(int row, int column) {
+        return craftSlots()[row * 3 + column];
+    }
+
+    private int[] craftSlots() {
+        return new int[] {
+            19, 20, 21,
+            28, 29, 30,
+            37, 38, 39
+        };
+    }
+
+    private Material displayMaterial(Material material) {
+        return material.isItem() ? material : Material.BARRIER;
     }
 
     private String uniqueLine(String line, int index) {

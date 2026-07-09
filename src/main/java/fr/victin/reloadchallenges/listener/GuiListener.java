@@ -38,7 +38,7 @@ public final class GuiListener implements Listener {
             return;
         }
         event.setCancelled(true);
-        if (holder.type() == GuiType.ROULETTE || holder.type() == GuiType.BINGO_BOARD) {
+        if (holder.type() == GuiType.ROULETTE || holder.type() == GuiType.BINGO_BOARD || holder.type() == GuiType.OBJECTIVE_RECIPE) {
             return;
         }
         if (!(event.getWhoClicked() instanceof Player player) || !plugin.playerManager().isHost(player)) {
